@@ -1,6 +1,10 @@
+USE InsuranceData;
+GO
+
 /* Channels DDL (structure only, no guardrails)
    Note: depends on Products for FK to core.ref_product_family.
 */
+
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name='cid') EXEC('CREATE SCHEMA cid');
 GO
 
@@ -47,9 +51,6 @@ CREATE TABLE cid.cid_ch_channel (
   owner_entity_id UNIQUEIDENTIFIER NULL,
   intermediary_id UNIQUEIDENTIFIER NULL,
   CONSTRAINT PK_cid_ch_channel PRIMARY KEY CLUSTERED (channel_id),
-  CONSTRAINT FK_cid_ch_channel_code FOREIGN KEY (channel_code) REFERENCES cid.cid_ch_ref_channel(channel_code),
-  CONSTRAINT FK_cid_ch_channel_owner FOREIGN KEY (owner_entity_id) REFERENCES core.entity(entity_id),
-  CONSTRAINT FK_cid_ch_channel_intermediary FOREIGN KEY (intermediary_id) REFERENCES cid.cid_int_intermediary(intermediary_id),
   CONSTRAINT CK_cid_ch_channel_range CHECK (valid_from < ISNULL(valid_to, CONVERT(DATETIME2(6), '9999-12-31 23:59:59.999999')))
 );
 GO
@@ -67,12 +68,6 @@ CREATE TABLE cid.cid_ch_channel_availability (
   valid_from           DATETIME2(6)     NOT NULL,
   valid_to             DATETIME2(6)     NULL,
   CONSTRAINT PK_cid_ch_channel_availability PRIMARY KEY CLUSTERED (availability_id),
-  CONSTRAINT FK_cid_ch_avail_channel    FOREIGN KEY (channel_id) REFERENCES cid.cid_ch_channel(channel_id),
-  CONSTRAINT FK_cid_ch_avail_product    FOREIGN KEY (product_family_code) REFERENCES core.ref_product_family(product_family_code),
-  CONSTRAINT FK_cid_ch_avail_country    FOREIGN KEY (country_code) REFERENCES core.ref_country(country_code),
-  CONSTRAINT FK_cid_ch_avail_juris      FOREIGN KEY (jurisdiction_id) REFERENCES cid.cid_int_ref_jurisdiction(jurisdiction_id),
-  CONSTRAINT FK_cid_ch_avail_stage      FOREIGN KEY (lifecycle_stage_code) REFERENCES cid.cid_ch_ref_lifecycle_stage(lifecycle_stage_code),
-  CONSTRAINT FK_cid_ch_avail_reason     FOREIGN KEY (reason_code) REFERENCES cid.cid_ch_ref_availability_reason(reason_code),
   CONSTRAINT CK_cid_ch_avail_range CHECK (valid_from < ISNULL(valid_to, CONVERT(DATETIME2(6), '9999-12-31 23:59:59.999999')))
 );
 GO
@@ -93,21 +88,7 @@ CREATE TABLE cid.cid_ch_channel_governance (
   decision_reason      NVARCHAR(500)    NULL,
   risk_code            VARCHAR(40)      NULL,
   CONSTRAINT PK_cid_ch_channel_governance PRIMARY KEY CLUSTERED (governance_id),
-  CONSTRAINT FK_cid_ch_gov_channel FOREIGN KEY (channel_id) REFERENCES cid.cid_ch_channel(channel_id),
-  CONSTRAINT FK_cid_ch_gov_stage   FOREIGN KEY (lifecycle_stage_code) REFERENCES cid.cid_ch_ref_lifecycle_stage(lifecycle_stage_code),
-  CONSTRAINT FK_cid_ch_gov_decider FOREIGN KEY (decided_by_entity_id) REFERENCES core.entity(entity_id),
   CONSTRAINT CK_cid_ch_gov_range CHECK (valid_from < ISNULL(valid_to, CONVERT(DATETIME2(6), '9999-12-31 23:59:59.999999')))
 );
 GO
 
-/* Backfill FK for channel membership (table created in Entities_Intermediaries.sql) */
-IF OBJECT_ID('cid.cid_ch_channel_membership','U') IS NOT NULL
-AND NOT EXISTS (
-  SELECT 1 FROM sys.foreign_keys
-  WHERE name = 'FK_cid_ch_mem_channel'
-    AND parent_object_id = OBJECT_ID('cid.cid_ch_channel_membership')
-)
-ALTER TABLE cid.cid_ch_channel_membership
-  ADD CONSTRAINT FK_cid_ch_mem_channel
-    FOREIGN KEY (channel_id) REFERENCES cid.cid_ch_channel(channel_id);
-GO

@@ -1,3 +1,6 @@
+USE InsuranceData;
+GO
+
 /* CID Conduct DDL (structure only, no guardrails) */
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name='cid') EXEC('CREATE SCHEMA cid');
 GO
@@ -14,10 +17,7 @@ CREATE TABLE cid.cid_cond_complaint (
   finding_code    VARCHAR(40)      NULL,
   remediation_text NVARCHAR(MAX)   NULL,
   remediation_ts  DATETIME2(6)     NULL,
-  CONSTRAINT PK_cid_cond_complaint PRIMARY KEY CLUSTERED (complaint_id),
-  CONSTRAINT FK_cid_cond_complaint_entity FOREIGN KEY (entity_id) REFERENCES core.entity(entity_id),
-  CONSTRAINT FK_cid_cond_complaint_policy FOREIGN KEY (policy_id) REFERENCES core.policy(policy_id),
-  CONSTRAINT FK_cid_cond_complaint_channel FOREIGN KEY (channel_id) REFERENCES cid.cid_ch_channel(channel_id)
+  CONSTRAINT PK_cid_cond_complaint PRIMARY KEY CLUSTERED (complaint_id)
 );
 GO
 
@@ -31,10 +31,7 @@ CREATE TABLE cid.cid_cond_suitability (
   assessed_ts     DATETIME2(6)     NOT NULL CONSTRAINT DF_cid_cond_suitability_ts DEFAULT SYSUTCDATETIME(),
   suitability_result VARCHAR(40)   NULL,      -- PASS/FAIL/CONDITIONAL (free code)
   rationale       NVARCHAR(MAX)    NULL,
-  CONSTRAINT PK_cid_cond_suitability PRIMARY KEY CLUSTERED (suitability_id),
-  CONSTRAINT FK_cid_cond_suit_entity FOREIGN KEY (entity_id) REFERENCES core.entity(entity_id),
-  CONSTRAINT FK_cid_cond_suit_intermediary FOREIGN KEY (intermediary_id) REFERENCES cid.cid_int_intermediary(intermediary_id),
-  CONSTRAINT FK_cid_cond_suit_policy FOREIGN KEY (policy_id) REFERENCES core.policy(policy_id)
+  CONSTRAINT PK_cid_cond_suitability PRIMARY KEY CLUSTERED (suitability_id)
 );
 GO
 
@@ -47,9 +44,7 @@ CREATE TABLE cid.cid_cond_product_governance (
   target_market_desc NVARCHAR(MAX)   NULL,
   review_date       DATE             NULL,
   test_results_json NVARCHAR(MAX)    NULL,
-  CONSTRAINT PK_cid_cond_product_governance PRIMARY KEY CLUSTERED (pog_id),
-  CONSTRAINT FK_cid_cond_pog_product FOREIGN KEY (product_family_code) REFERENCES core.ref_product_family(product_family_code),
-  CONSTRAINT FK_cid_cond_pog_policy  FOREIGN KEY (policy_id) REFERENCES core.policy(policy_id)
+  CONSTRAINT PK_cid_cond_product_governance PRIMARY KEY CLUSTERED (pog_id)
 );
 GO
 
