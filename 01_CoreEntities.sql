@@ -396,23 +396,12 @@ CREATE TABLE core.entity_relationship (
 );
 GO
 
-/* Policy and PPR (Option A) */
+-- Policy tables are created in 09_Policies.sql; supporting refs remain here.
 IF OBJECT_ID('core.ref_lob','U') IS NULL
 CREATE TABLE core.ref_lob (
-  lob_code VARCHAR(20)    NOT NULL,
+  lob_code NVARCHAR(10)   NOT NULL,
   lob_name NVARCHAR(120)  NULL,
   CONSTRAINT PK_ref_lob PRIMARY KEY CLUSTERED (lob_code)
-);
-GO
-
-IF OBJECT_ID('core.policy','U') IS NULL
-CREATE TABLE core.policy (
-  policy_id      UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_policy_id DEFAULT NEWID(),
-  policy_number  NVARCHAR(64)     NULL,
-  lob_code       VARCHAR(20)      NULL,
-  effective_from DATETIME2(6)     NULL,
-  effective_to   DATETIME2(6)     NULL,
-  CONSTRAINT PK_policy PRIMARY KEY CLUSTERED (policy_id)
 );
 GO
 

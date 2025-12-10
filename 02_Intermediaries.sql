@@ -131,6 +131,11 @@ CREATE TABLE cid.cid_int_remuneration_template (
   CONSTRAINT PK_cid_int_remuneration_template PRIMARY KEY (template_id)
 );
 GO
+IF NOT EXISTS (
+  SELECT 1 FROM sys.check_constraints
+  WHERE name = 'CK_cid_remtpl_json'
+    AND parent_object_id = OBJECT_ID('cid.cid_int_remuneration_template')
+)
 ALTER TABLE cid.cid_int_remuneration_template
   ADD CONSTRAINT CK_cid_remtpl_json CHECK (ISJSON(definition_json) = 1);
 GO
