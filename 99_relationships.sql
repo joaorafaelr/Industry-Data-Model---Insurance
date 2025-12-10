@@ -2958,3 +2958,313 @@ AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_groupcatpr_country'
 CREATE INDEX IX_rar_groupcatpr_country
   ON rar.rar_groupcat_peril_region_ref(country_code);
 GO
+
+/* ============================================================
+   RAR — ACTUARIAL
+   PART 2 — RELATIONSHIPS (FKs), UNIQUEs, INDEXES (guarded)
+   ============================================================ */
+
+/* UNIQUEs / Natural keys */
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_as_setkey')
+ALTER TABLE rar.rar_act_assumption_set
+  ADD CONSTRAINT UQ_rar_act_as_setkey UNIQUE (set_key);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_asv_ver')
+ALTER TABLE rar.rar_act_assumption_set_version
+  ADD CONSTRAINT UQ_rar_act_asv_ver UNIQUE (assumption_set_id, version_tag);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_dcr_keydate')
+ALTER TABLE rar.rar_act_discount_curve_ref
+  ADD CONSTRAINT UQ_rar_act_dcr_keydate UNIQUE (curve_key, as_of_date);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_ycr_keydate')
+ALTER TABLE rar.rar_act_yield_curve_ref
+  ADD CONSTRAINT UQ_rar_act_ycr_keydate UNIQUE (curve_key, as_of_date);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_fxset_nat')
+ALTER TABLE rar.rar_act_ref_fx_rate_set
+  ADD CONSTRAINT UQ_rar_act_fxset_nat UNIQUE (set_key, as_of_date);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_cg_nat')
+ALTER TABLE rar.rar_act_actuarial_contract_group
+  ADD CONSTRAINT UQ_rar_act_cg_nat UNIQUE (portfolio_code, cohort_year, measurement_model, onerous_bucket, currency_code);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_cgri_nat')
+ALTER TABLE rar.rar_act_actuarial_contract_group_ri
+  ADD CONSTRAINT UQ_rar_act_cgri_nat UNIQUE (portfolio_code, cohort_year, measurement_model, currency_code);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_pr_runkey')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT UQ_rar_act_pr_runkey UNIQUE (run_key);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_mr_runkey')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT UQ_rar_act_mr_runkey UNIQUE (run_key);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_cgmap_nat')
+ALTER TABLE rar.rar_act_policy_contract_group_map
+  ADD CONSTRAINT UQ_rar_act_cgmap_nat UNIQUE (policy_id, contract_group_id, effective_from);
+GO
+
+/* Optional: enforce single CCY per (run, period_start, type) */
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name='UQ_rar_act_pcf_one_ccy')
+ALTER TABLE rar.rar_act_projection_cashflow_line
+  ADD CONSTRAINT UQ_rar_act_pcf_one_ccy
+  UNIQUE (projection_run_id, period_start, cashflow_type_code, currency_code);
+GO
+
+/* FOREIGN KEYS */
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_asv_set')
+ALTER TABLE rar.rar_act_assumption_set_version
+  ADD CONSTRAINT FK_rar_act_asv_set FOREIGN KEY (assumption_set_id)
+  REFERENCES rar.rar_act_assumption_set(assumption_set_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_dcp_ref')
+ALTER TABLE rar.rar_act_discount_curve_point
+  ADD CONSTRAINT FK_rar_act_dcp_ref FOREIGN KEY (discount_curve_id)
+  REFERENCES rar.rar_act_discount_curve_ref(discount_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_ycp_ref')
+ALTER TABLE rar.rar_act_yield_curve_point
+  ADD CONSTRAINT FK_rar_act_ycp_ref FOREIGN KEY (yield_curve_id)
+  REFERENCES rar.rar_act_yield_curve_ref(yield_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pr_cg')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT FK_rar_act_pr_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pr_asv')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT FK_rar_act_pr_asv FOREIGN KEY (assumption_version_id)
+  REFERENCES rar.rar_act_assumption_set_version(assumption_version_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pr_dcr')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT FK_rar_act_pr_dcr FOREIGN KEY (discount_curve_id)
+  REFERENCES rar.rar_act_discount_curve_ref(discount_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pr_ycr')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT FK_rar_act_pr_ycr FOREIGN KEY (yield_curve_id)
+  REFERENCES rar.rar_act_yield_curve_ref(yield_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pr_ra')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT FK_rar_act_pr_ra FOREIGN KEY (ra_method_id)
+  REFERENCES rar.rar_act_risk_adjustment_method(ra_method_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pr_fx')
+ALTER TABLE rar.rar_act_projection_run
+  ADD CONSTRAINT FK_rar_act_pr_fx FOREIGN KEY (fx_rate_set_id)
+  REFERENCES rar.rar_act_ref_fx_rate_set(fx_rate_set_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pcf_type')
+ALTER TABLE rar.rar_act_projection_cashflow_line
+  ADD CONSTRAINT FK_rar_act_pcf_type FOREIGN KEY (cashflow_type_code)
+  REFERENCES rar.rar_act_ref_cashflow_type(cashflow_type_code);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_pcf_run')
+ALTER TABLE rar.rar_act_projection_cashflow_line
+  ADD CONSTRAINT FK_rar_act_pcf_run FOREIGN KEY (projection_run_id)
+  REFERENCES rar.rar_act_projection_run(projection_run_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_acf_cg')
+ALTER TABLE rar.rar_act_actual_cashflow_line
+  ADD CONSTRAINT FK_rar_act_acf_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_acf_type')
+ALTER TABLE rar.rar_act_actual_cashflow_line
+  ADD CONSTRAINT FK_rar_act_acf_type FOREIGN KEY (cashflow_type_code)
+  REFERENCES rar.rar_act_ref_cashflow_type(cashflow_type_code);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_cu_cg')
+ALTER TABLE rar.rar_act_coverage_units_period
+  ADD CONSTRAINT FK_rar_act_cu_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_cg')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_pr')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_pr FOREIGN KEY (projection_run_id)
+  REFERENCES rar.rar_act_projection_run(projection_run_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_asv')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_asv FOREIGN KEY (assumption_version_id)
+  REFERENCES rar.rar_act_assumption_set_version(assumption_version_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_dcr')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_dcr FOREIGN KEY (discount_curve_id)
+  REFERENCES rar.rar_act_discount_curve_ref(discount_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_ycr')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_ycr FOREIGN KEY (yield_curve_id)
+  REFERENCES rar.rar_act_yield_curve_ref(yield_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_ra')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_ra FOREIGN KEY (ra_method_id)
+  REFERENCES rar.rar_act_risk_adjustment_method(ra_method_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mr_fx')
+ALTER TABLE rar.rar_act_measurement_run
+  ADD CONSTRAINT FK_rar_act_mr_fx FOREIGN KEY (fx_rate_set_id)
+  REFERENCES rar.rar_act_ref_fx_rate_set(fx_rate_set_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_rf_mr')
+ALTER TABLE rar.rar_act_ifrs17_rollforward
+  ADD CONSTRAINT FK_rar_act_rf_mr FOREIGN KEY (measurement_run_id)
+  REFERENCES rar.rar_act_measurement_run(measurement_run_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_rf_cg')
+ALTER TABLE rar.rar_act_ifrs17_rollforward
+  ADD CONSTRAINT FK_rar_act_rf_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_ea_mr')
+ALTER TABLE rar.rar_act_experience_adjustment
+  ADD CONSTRAINT FK_rar_act_ea_mr FOREIGN KEY (measurement_run_id)
+  REFERENCES rar.rar_act_measurement_run(measurement_run_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_ea_cg')
+ALTER TABLE rar.rar_act_experience_adjustment
+  ADD CONSTRAINT FK_rar_act_ea_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_ea_type')
+ALTER TABLE rar.rar_act_experience_adjustment
+  ADD CONSTRAINT FK_rar_act_ea_type FOREIGN KEY (cashflow_type_code)
+  REFERENCES rar.rar_act_ref_cashflow_type(cashflow_type_code);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_tr_cg')
+ALTER TABLE rar.rar_act_transition_setting
+  ADD CONSTRAINT FK_rar_act_tr_cg FOREIGN KEY (contract_group_id)
+  REFERENCES rar.rar_act_actuarial_contract_group(contract_group_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_mri_cgri')
+ALTER TABLE rar.rar_act_ifrs17_measurement_ri
+  ADD CONSTRAINT FK_rar_act_mri_cgri FOREIGN KEY (contract_group_ri_id)
+  REFERENCES rar.rar_act_actuarial_contract_group_ri(contract_group_ri_id);
+GO
+
+/* Optional cross-domain FK to policies */
+IF OBJECT_ID('core.core_policy','U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_rar_act_cgmap_policy')
+ALTER TABLE rar.rar_act_policy_contract_group_map
+  ADD CONSTRAINT FK_rar_act_cgmap_policy FOREIGN KEY (policy_id)
+  REFERENCES core.core_policy(policy_id);
+GO
+
+/* INDEXES (guarded) */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_cg_portfolio' AND object_id=OBJECT_ID('rar.rar_act_actuarial_contract_group'))
+CREATE INDEX IX_rar_act_cg_portfolio ON rar.rar_act_actuarial_contract_group(portfolio_code, cohort_year);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_cgmap_policy_from' AND object_id=OBJECT_ID('rar.rar_act_policy_contract_group_map'))
+CREATE INDEX IX_rar_act_cgmap_policy_from ON rar.rar_act_policy_contract_group_map(policy_id, effective_from);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_asv_from' AND object_id=OBJECT_ID('rar.rar_act_assumption_set_version'))
+CREATE INDEX IX_rar_act_asv_from ON rar.rar_act_assumption_set_version(assumption_set_id, effective_from);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pr_cg' AND object_id=OBJECT_ID('rar.rar_act_projection_run'))
+CREATE INDEX IX_rar_act_pr_cg ON rar.rar_act_projection_run(contract_group_id, as_of_date);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pr_asv' AND object_id=OBJECT_ID('rar.rar_act_projection_run'))
+CREATE INDEX IX_rar_act_pr_asv ON rar.rar_act_projection_run(assumption_version_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pr_dcr' AND object_id=OBJECT_ID('rar.rar_act_projection_run'))
+CREATE INDEX IX_rar_act_pr_dcr ON rar.rar_act_projection_run(discount_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pr_ycr' AND object_id=OBJECT_ID('rar.rar_act_projection_run'))
+CREATE INDEX IX_rar_act_pr_ycr ON rar.rar_act_projection_run(yield_curve_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pr_ra' AND object_id=OBJECT_ID('rar.rar_act_projection_run'))
+CREATE INDEX IX_rar_act_pr_ra ON rar.rar_act_projection_run(ra_method_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pr_fx' AND object_id=OBJECT_ID('rar.rar_act_projection_run'))
+CREATE INDEX IX_rar_act_pr_fx ON rar.rar_act_projection_run(fx_rate_set_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_pcf_run' AND object_id=OBJECT_ID('rar.rar_act_projection_cashflow_line'))
+CREATE INDEX IX_rar_act_pcf_run ON rar.rar_act_projection_cashflow_line(projection_run_id, period_start);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_acf_cg_date' AND object_id=OBJECT_ID('rar.rar_act_actual_cashflow_line'))
+CREATE INDEX IX_rar_act_acf_cg_date ON rar.rar_act_actual_cashflow_line(contract_group_id, period_date);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_cu_cg_from' AND object_id=OBJECT_ID('rar.rar_act_coverage_units_period'))
+CREATE INDEX IX_rar_act_cu_cg_from ON rar.rar_act_coverage_units_period(contract_group_id, period_start);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_mr_cg' AND object_id=OBJECT_ID('rar.rar_act_measurement_run'))
+CREATE INDEX IX_rar_act_mr_cg ON rar.rar_act_measurement_run(contract_group_id, as_of_date);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_mr_pr' AND object_id=OBJECT_ID('rar.rar_act_measurement_run'))
+CREATE INDEX IX_rar_act_mr_pr ON rar.rar_act_measurement_run(projection_run_id);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_rf_mr' AND object_id=OBJECT_ID('rar.rar_act_ifrs17_rollforward'))
+CREATE INDEX IX_rar_act_rf_mr ON rar.rar_act_ifrs17_rollforward(measurement_run_id, contract_group_id, period_start);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_ea_mr' AND object_id=OBJECT_ID('rar.rar_act_experience_adjustment'))
+CREATE INDEX IX_rar_act_ea_mr ON rar.rar_act_experience_adjustment(measurement_run_id, contract_group_id, period_date);
+GO
+
+/* Optional: RI metric lookup */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_rar_act_mri_metric' AND object_id=OBJECT_ID('rar.rar_act_ifrs17_measurement_ri'))
+CREATE INDEX IX_rar_act_mri_metric ON rar.rar_act_ifrs17_measurement_ri(metric_code, as_of_date);
+GO
